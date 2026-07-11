@@ -13,6 +13,8 @@
 - 支持 GitHub、CodeHub、GitLab、Gitee 及其他代码托管平台
 - 最终判断权保留给人工 reviewer
 
+延伸阅读：[AI 写代码越快，我们越需要认真看代码](docs/ai-writes-code-humans-still-review.md)
+
 ## 目录规范
 
 ```text
