@@ -1,0 +1,4 @@
+.DS_Store
+**/reports/*.html
+**/reports/*.pdf
+**/reports/*.png
