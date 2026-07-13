@@ -37,14 +37,17 @@ def parse_args() -> argparse.Namespace:
         "--overwrite", action="store_true", help="Replace existing Markdown outputs"
     )
     parser.add_argument(
+        "--vision-model",
         "--local-vision-model",
-        help="Local vision model for images and images embedded in documents",
+        dest="vision_model",
+        help="Vision model for images and images embedded in documents",
     )
     parser.add_argument(
+        "--llm-base-url",
         "--local-llm-base-url",
+        dest="llm_base_url",
         help=(
-            "Loopback OpenAI-compatible endpoint; overrides "
-            "MARKITDOWN_LLM_BASE_URL"
+            "OpenAI-compatible endpoint; overrides MARKITDOWN_LLM_BASE_URL"
         ),
     )
     parser.add_argument(
@@ -53,26 +56,26 @@ def parse_args() -> argparse.Namespace:
             "Extract all visible text, preserving its reading order, and describe "
             "important non-text visual information."
         ),
-        help="Prompt sent to the local vision model",
+        help="Prompt sent to the configured vision model",
     )
     return parser.parse_args()
 
 
-def create_local_llm_client(base_url: str, api_key: str):
+def create_llm_client(base_url: str, api_key: str):
     parsed = urlparse(base_url)
-    if parsed.scheme not in {"http", "https"} or parsed.hostname not in LOOPBACK_HOSTS:
-        raise ValueError("local LLM endpoint must use localhost or a loopback IP address")
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("LLM endpoint must be a valid http:// or https:// URL")
     try:
         import httpx
         from openai import OpenAI
     except ImportError as exc:
         raise RuntimeError(
-            "install the local client with: python -m pip install openai"
+            "install the LLM client with: python -m pip install openai"
         ) from exc
     return OpenAI(
         base_url=base_url,
         api_key=api_key,
-        http_client=httpx.Client(trust_env=False),
+        http_client=httpx.Client(trust_env=parsed.hostname not in LOOPBACK_HOSTS),
     )
 
 
@@ -95,17 +98,17 @@ def main() -> int:
             sources.append((source, Path(item.name) / source.relative_to(item)))
 
     vision_options = {}
-    if args.local_vision_model:
+    if args.vision_model:
         base_url = (
-            args.local_llm_base_url
+            args.llm_base_url
             or os.environ.get("MARKITDOWN_LLM_BASE_URL")
             or "http://127.0.0.1:11434/v1"
         )
         api_key = os.environ.get("MARKITDOWN_LLM_API_KEY") or "local-only"
         try:
             vision_options.update(
-                llm_client=create_local_llm_client(base_url, api_key),
-                llm_model=args.local_vision_model,
+                llm_client=create_llm_client(base_url, api_key),
+                llm_model=args.vision_model,
                 llm_prompt=args.image_prompt,
             )
         except (RuntimeError, ValueError) as exc:
