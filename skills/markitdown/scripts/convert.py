@@ -18,7 +18,9 @@ except ImportError as exc:
 
 
 UNSUPPORTED_MEDIA_EXTENSIONS = {".mp3", ".mp4", ".m4a", ".wav"}
-SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+STANDALONE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+DIRECT_VISION_EXTENSIONS = STANDALONE_IMAGE_EXTENSIONS | {".pptx"}
+OCR_DOCUMENT_EXTENSIONS = {".pdf", ".docx", ".xlsx"}
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 
@@ -34,11 +36,8 @@ def parse_args() -> argparse.Namespace:
         "--overwrite", action="store_true", help="Replace existing Markdown outputs"
     )
     parser.add_argument(
-        "--use-plugins", action="store_true", help="Enable installed MarkItDown plugins"
-    )
-    parser.add_argument(
         "--local-vision-model",
-        help="Local OpenAI-compatible vision model used for JPG/PNG descriptions",
+        help="Local vision model for images and images embedded in documents",
     )
     parser.add_argument(
         "--local-llm-base-url",
@@ -47,7 +46,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--image-prompt",
-        default="Describe this image in detail and transcribe all visible text.",
+        default=(
+            "Extract all visible text, preserving its reading order, and describe "
+            "important non-text visual information."
+        ),
         help="Prompt sent to the local vision model",
     )
     return parser.parse_args()
@@ -80,6 +82,15 @@ def main() -> int:
         return 2
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
+
+    sources: list[tuple[Path, Path]] = []
+    for item in args.inputs:
+        if item.is_file():
+            sources.append((item, Path(item.name)))
+            continue
+        for source in sorted(path for path in item.rglob("*") if path.is_file()):
+            sources.append((source, Path(item.name) / source.relative_to(item)))
+
     vision_options = {}
     if args.local_vision_model:
         try:
@@ -91,16 +102,43 @@ def main() -> int:
         except (RuntimeError, ValueError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
-    converter = MarkItDown(enable_plugins=args.use_plugins)
-    failures = 0
 
-    sources: list[tuple[Path, Path]] = []
-    for item in args.inputs:
-        if item.is_file():
-            sources.append((item, Path(item.name)))
-            continue
-        for source in sorted(path for path in item.rglob("*") if path.is_file()):
-            sources.append((source, Path(item.name) / source.relative_to(item)))
+    converter = MarkItDown(enable_plugins=False)
+    needs_embedded_image_ocr = bool(vision_options) and any(
+        source.suffix.lower() in OCR_DOCUMENT_EXTENSIONS
+        for source, _ in sources
+    )
+    if needs_embedded_image_ocr:
+        try:
+            from markitdown_ocr import (
+                DocxConverterWithOCR,
+                LLMVisionOCRService,
+                PdfConverterWithOCR,
+                XlsxConverterWithOCR,
+            )
+        except ImportError as exc:
+            print(
+                "error: install embedded-image support with: "
+                "python -m pip install markitdown-ocr",
+                file=sys.stderr,
+            )
+            return 2
+        ocr_service = LLMVisionOCRService(
+            client=vision_options["llm_client"],
+            model=vision_options["llm_model"],
+            default_prompt=vision_options["llm_prompt"],
+        )
+        converter.register_converter(
+            PdfConverterWithOCR(ocr_service=ocr_service), priority=-1.0
+        )
+        converter.register_converter(
+            DocxConverterWithOCR(ocr_service=ocr_service), priority=-1.0
+        )
+        converter.register_converter(
+            XlsxConverterWithOCR(ocr_service=ocr_service), priority=-1.0
+        )
+
+    failures = 0
 
     for source, relative in sources:
         if source.suffix.lower() in UNSUPPORTED_MEDIA_EXTENSIONS:
@@ -115,7 +153,9 @@ def main() -> int:
 
         try:
             conversion_options = (
-                vision_options if source.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS else {}
+                vision_options
+                if source.suffix.lower() in DIRECT_VISION_EXTENSIONS
+                else {}
             )
             result = converter.convert_local(source, **conversion_options)
             content = result.markdown

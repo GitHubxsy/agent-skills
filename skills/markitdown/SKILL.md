@@ -1,6 +1,6 @@
 ---
 name: markitdown
-description: Convert files, documents, images, and URLs into clean Markdown for LLM consumption with Microsoft's MarkItDown. Use for extracting or reading PDF, Word, PowerPoint, Excel, HTML, CSV, JSON, XML, EPUB, ZIP, Outlook, or image content; converting one file or a folder; ingesting documents into a knowledge base; preparing content for summarization, search, RAG, or other analysis; using a local OpenAI-compatible vision model for JPG/PNG descriptions; or troubleshooting MarkItDown dependencies. Trigger on requests such as "convert to Markdown," "extract text," "read this document into text," "ingest these files," or "turn this PDF/deck/spreadsheet/image into text," even when MarkItDown is not named. Audio and video transcription are intentionally unsupported. Do not use to author or edit Office/PDF files; use the format-specific skill for those tasks.
+description: Convert files, documents, images, and URLs into clean Markdown for LLM consumption with Microsoft's MarkItDown. Use for extracting or reading PDF, Word, PowerPoint, Excel, HTML, CSV, JSON, XML, EPUB, ZIP, Outlook, or image content; converting one file or a folder; ingesting documents into a knowledge base; preparing content for summarization, search, RAG, or other analysis; using a local OpenAI-compatible vision model to extract text and meaning from standalone images or images embedded in PPTX, DOCX, PDF, and XLSX; or troubleshooting MarkItDown dependencies. Trigger on requests such as "convert to Markdown," "extract text," "read this document into text," "ingest these files," or "turn this PDF/deck/spreadsheet/image into text," even when MarkItDown is not named. Audio and video transcription are intentionally unsupported. Do not use to author or edit Office/PDF files; use the format-specific skill for those tasks.
 ---
 
 # MarkItDown
@@ -12,7 +12,7 @@ Convert source material into Markdown optimized for language-model and text-anal
 - Convert one local file or supported URL: use the `markitdown` CLI.
 - Convert several local files reproducibly: use `scripts/convert.py`.
 - Integrate conversion into an application or pass streams: use the Python API.
-- Convert JPG/PNG images: run the bundled script with a local OpenAI-compatible vision model.
+- Read standalone images or images embedded in PPTX, DOCX, PDF, or XLSX: run the bundled script with a local OpenAI-compatible vision model.
 - Reject audio and video inputs; this Skill does not transcribe them.
 
 ## Install safely
@@ -22,7 +22,7 @@ Require Python 3.10 or newer. Prefer an isolated environment:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install 'markitdown[pdf,docx,pptx,xlsx,xls,outlook]' openai
+python -m pip install 'markitdown[pdf,docx,pptx,xlsx,xls,outlook]' markitdown-ocr openai
 ```
 
 Install only required extras when dependency size matters, for example:
@@ -52,9 +52,9 @@ python scripts/convert.py file.pdf slides.pptx notes.docx --output-dir markdown
 python scripts/convert.py source-folder --output-dir markdown
 ```
 
-The script recursively converts directories and preserves their relative structure. It preserves each source extension in the output name (`file.pdf.md`) to avoid collisions. Add `--overwrite` only when replacing existing outputs is intended. Add `--use-plugins` only for trusted, installed plugins.
+The script recursively converts directories and preserves their relative structure. It preserves each source extension in the output name (`file.pdf.md`) to avoid collisions. Add `--overwrite` only when replacing existing outputs is intended.
 
-## Describe images with a local vision model
+## Read images inside documents with a local vision model
 
 Start a local server that exposes an OpenAI-compatible chat-completions API, such as Ollama, LM Studio, or vLLM. The model must support image input.
 
@@ -62,6 +62,14 @@ For Ollama, start the service and make sure a vision model is available, then ru
 
 ```bash
 python scripts/convert.py diagram.png \
+  --local-vision-model <vision-model> \
+  --output-dir markdown
+```
+
+Use the same option for PPTX, DOCX, PDF, and XLSX. The OCR converter extracts embedded images, asks the local model to read visible text and important visual information, and inserts the result into the document Markdown:
+
+```bash
+python scripts/convert.py presentation.pptx \
   --local-vision-model <vision-model> \
   --output-dir markdown
 ```
@@ -76,7 +84,7 @@ python scripts/convert.py photos \
   --output-dir markdown
 ```
 
-The script rejects non-loopback LLM endpoints. It sends image bytes only to the local service and does not configure a cloud API key. Without `--local-vision-model`, JPG/PNG conversion is limited to locally extractable metadata and may produce no Markdown.
+The script rejects non-loopback LLM endpoints. It sends standalone or document-embedded image bytes only to the local service and does not configure a cloud API key. PPTX uses MarkItDown's built-in image-description path; DOCX, PDF, and XLSX explicitly register only their OCR converters rather than loading arbitrary plugins. Without `--local-vision-model`, JPG/PNG conversion is limited to locally extractable metadata, and document output omits model-generated image text.
 
 For application code:
 
@@ -118,17 +126,6 @@ Catch `MarkItDownException` when conversion errors need programmatic handling. I
 
 Install the exact extra named in a missing-dependency message and retry. If installation is unavailable, fall back to a dedicated format skill rather than abandoning the extraction task.
 
-## Plugins
-
-Plugins are disabled by default. Inspect installed plugins before enabling them:
-
-```bash
-markitdown --list-plugins
-markitdown --use-plugins document.pdf -o document.md
-```
-
-Do not enable cloud-backed plugins. Inspect any plugin before enabling it and confirm that it performs no external network calls when local-only processing is required.
-
 ## Verify the result
 
 After conversion:
@@ -136,7 +133,7 @@ After conversion:
 1. Confirm the output exists, is non-empty, and is valid UTF-8 Markdown.
 2. Inspect headings, tables, links, and representative sections against the source.
 3. Report unsupported or weakly extracted content instead of silently claiming completeness.
-4. For images, confirm the local vision model returned a useful description and visible text.
+4. For standalone and embedded images, confirm the local vision model returned useful visible text and visual descriptions.
 5. Keep the original source unless the user explicitly authorizes deletion.
 
 ## Security boundaries
