@@ -74,7 +74,20 @@ python scripts/convert.py presentation.pptx \
   --output-dir markdown
 ```
 
-The default endpoint is `http://127.0.0.1:11434/v1`. Override it only for another loopback endpoint:
+The default endpoint is `http://127.0.0.1:11434/v1`. Configure another loopback endpoint and its API key through dedicated environment variables:
+
+```bash
+export MARKITDOWN_LLM_BASE_URL=http://localhost:1234/v1
+export MARKITDOWN_LLM_API_KEY=<local-api-key>
+
+python scripts/convert.py presentation.pptx \
+  --local-vision-model <vision-model> \
+  --output-dir markdown
+```
+
+`MARKITDOWN_LLM_API_KEY` is optional for servers that do not authenticate; the script uses a non-secret local placeholder when it is unset. Do not reuse a cloud API key for a local service.
+
+The CLI option overrides `MARKITDOWN_LLM_BASE_URL` when a one-off endpoint is needed:
 
 ```bash
 python scripts/convert.py photos \
@@ -84,7 +97,7 @@ python scripts/convert.py photos \
   --output-dir markdown
 ```
 
-The script rejects non-loopback LLM endpoints. It sends standalone or document-embedded image bytes only to the local service and does not configure a cloud API key. PPTX uses MarkItDown's built-in image-description path; DOCX, PDF, and XLSX explicitly register only their OCR converters rather than loading arbitrary plugins. Without `--local-vision-model`, JPG/PNG conversion is limited to locally extractable metadata, and document output omits model-generated image text.
+The script rejects non-loopback LLM endpoints and never prints the API key. It sends standalone or document-embedded image bytes only to the local service. PPTX uses MarkItDown's built-in image-description path; DOCX, PDF, and XLSX explicitly register only their OCR converters rather than loading arbitrary plugins. Without `--local-vision-model`, JPG/PNG conversion is limited to locally extractable metadata, and document output omits model-generated image text.
 
 For application code:
 

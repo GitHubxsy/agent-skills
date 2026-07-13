@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -41,8 +42,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--local-llm-base-url",
-        default="http://127.0.0.1:11434/v1",
-        help="Loopback OpenAI-compatible endpoint (default: Ollama)",
+        help=(
+            "Loopback OpenAI-compatible endpoint; overrides "
+            "MARKITDOWN_LLM_BASE_URL"
+        ),
     )
     parser.add_argument(
         "--image-prompt",
@@ -55,7 +58,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def create_local_llm_client(base_url: str):
+def create_local_llm_client(base_url: str, api_key: str):
     parsed = urlparse(base_url)
     if parsed.scheme not in {"http", "https"} or parsed.hostname not in LOOPBACK_HOSTS:
         raise ValueError("local LLM endpoint must use localhost or a loopback IP address")
@@ -68,7 +71,7 @@ def create_local_llm_client(base_url: str):
         ) from exc
     return OpenAI(
         base_url=base_url,
-        api_key="local-only",
+        api_key=api_key,
         http_client=httpx.Client(trust_env=False),
     )
 
@@ -93,9 +96,15 @@ def main() -> int:
 
     vision_options = {}
     if args.local_vision_model:
+        base_url = (
+            args.local_llm_base_url
+            or os.environ.get("MARKITDOWN_LLM_BASE_URL")
+            or "http://127.0.0.1:11434/v1"
+        )
+        api_key = os.environ.get("MARKITDOWN_LLM_API_KEY") or "local-only"
         try:
             vision_options.update(
-                llm_client=create_local_llm_client(args.local_llm_base_url),
+                llm_client=create_local_llm_client(base_url, api_key),
                 llm_model=args.local_vision_model,
                 llm_prompt=args.image_prompt,
             )
