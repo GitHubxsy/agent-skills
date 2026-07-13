@@ -1,4 +1,4 @@
 interface:
   display_name: "MarkItDown"
-  short_description: "Convert documents and media into LLM-ready Markdown"
+  short_description: "Convert documents and images into LLM-ready Markdown"
   default_prompt: "Use $markitdown to convert these files into structured Markdown for downstream analysis."
