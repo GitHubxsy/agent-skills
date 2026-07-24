@@ -1,10 +1,10 @@
-# AI Coding 项目是如何一步步腐败的
+# Vibe Coding 项目是如何一步步腐败的
 
 上一篇文章介绍了 `explain-diff-for-human-review` Skill：它将代码改动整理成适合人类检视的报告，帮助开发者理解修改意图、系统影响、风险和验证证据。
 
-但为什么在 AI Coding 时代，我们如此强调“帮助人类看懂代码”？
+但为什么在 Vibe Coding 时代，我们如此强调“帮助人类看懂代码”？
 
-因为 AI 项目真正危险的，并不只是生成错误代码，而是项目可能在大量合理、正确且测试全绿的修改中，一步步走向腐败。
+因为 Vibe Coding 项目真正危险的，并不只是生成错误代码，而是项目可能在大量合理、正确且测试全绿的修改中，一步步走向腐败。
 
 ## 需求中存在四类缺口
 
@@ -125,7 +125,7 @@ flowchart LR
 
 ## 在写代码前，先把问题想清楚
 
-近期受到关注的 [`grill-me`](https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md)，来自约有 184k Star 的 [`mattpocock/skills`](https://github.com/mattpocock/skills) 仓库。它的流行说明 AI Coding 的瓶颈正在从“代码写不出来”转向“人还没有把真正的问题想清楚”：
+近期受到关注的 [`grill-me`](https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md)，来自约有 184k Star 的 [`mattpocock/skills`](https://github.com/mattpocock/skills) 仓库。它的流行说明 Vibe Coding 的瓶颈正在从“代码写不出来”转向“人还没有把真正的问题想清楚”：
 
 > Agent 执行得越快，人类尚未表达的假设就越快进入系统。
 
@@ -167,7 +167,7 @@ flowchart LR
 
 弱模型可能留下明显错误，强模型却能把错误前提实现得更加完整、更难推翻。因此，更强的模型不会自然阻止项目腐败，反而可能加速假设的传播。
 
-AI Coding 最大的风险，不是 Agent 写错代码，而是它写出了完全正确的代码，却实现了一个从未被验证过的世界。
+Vibe Coding 最大的风险，不是 Agent 写错代码，而是它写出了完全正确的代码，却实现了一个从未被验证过的世界。
 
 模型决定项目构建得多快，Harness 决定 Agent 能走多远。
 
