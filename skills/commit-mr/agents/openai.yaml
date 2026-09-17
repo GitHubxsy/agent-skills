@@ -1,0 +1,7 @@
+interface:
+  display_name: "Commit MR"
+  short_description: "提交代码并创建带结构化说明的 CodeHub MR"
+  default_prompt: "Use $commit-mr to commit the current task changes and create or update a CodeHub MR."
+
+policy:
+  allow_implicit_invocation: false
