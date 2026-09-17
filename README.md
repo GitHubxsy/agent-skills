@@ -6,10 +6,11 @@
 
 ### explain-diff-for-human-review
 
-将提交、分支、PR/MR、暂存区或工作区代码差异整理为独立 HTML 报告，帮助人类检视修改意图、架构影响、风险、兼容性和验证证据。
+将提交、分支、PR/MR、暂存区或工作区代码差异整理为自包含 HTML 报告，以最小有效视图帮助人类理解行为变化、系统形状、风险和验证证据。
 
 - [查看 Skill 定义](skills/explain-diff-for-human-review/SKILL.md)
 - 输出为自包含 HTML，无远程脚本、样式或运行时依赖
+- 根据改动选择伪代码、调用树、组件树、文件树、流程图或 `diff` 视图
 - 支持 GitHub、CodeHub、GitLab、Gitee 及其他代码托管平台
 - 最终判断权保留给人工 reviewer
 
